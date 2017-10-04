@@ -1,0 +1,150 @@
+# Reproducible Research: Assignment 1
+
+---
+
+```{r setoptions, echo=FALSE, results="hide"}
+library(knitr)
+opts_chunk$set(echo=TRUE, results="asis")
+```
+
+## 1.Code for reading in the dataset and/or processing the data
+
+Load the data.
+```{r}
+d<- read.csv (file = "activity.csv", header = TRUE)
+d$date<-as.Date(d$date,format='%Y-%m-%d')
+
+```
+
+##2 Histogram of the total number of steps taken each day
+```{r}
+q2 <- aggregate(x = d[c("steps","interval")],
+                     FUN = sum,
+                     by = list(Group.date = d$date), na.rm=TRUE)
+
+##  Histogram
+hist(q2$steps,
+     col = "lightgray",
+     border = "black", 
+     xlab = "Interval",
+     main = "Histogram - Total Steps per day")
+  abline(v = mean(q2$steps),
+         col = "blue",
+         lwd = 2)
+  abline(v = median(q2$steps),
+         col = "red",
+         lwd = 2)
+  legend(x = "topright", 
+       c("Mean", "Median"),
+       col = c("blue", "red"),
+       lwd = c(2, 2, 2))
+```
+
+## 3. Mean and median number of steps taken each day
+```{r}
+q3_mean <- setNames(aggregate(x = d[c("steps")],
+                FUN = mean,
+                by = list(d$date), na.rm=TRUE), c("Date", "Mean"))
+
+q3_median <- setNames(aggregate(x = d[c("steps")],
+                    FUN = median,
+                    by = list(d$date), na.rm=TRUE), c("Date", "Median"))
+
+q3 <- merge(q3_mean,q3_median,by="Date")
+
+print(q3)
+```
+## 4. Time series plot of the average number of steps taken
+```{r}
+q4_mean <- setNames(aggregate(x = d[c("steps")],
+                             FUN = mean,
+                             by = list(d$interval), na.rm=TRUE), c("Interval", "MeanStep"))
+
+## Interval with Max Average Steps
+q4_max<-subset(q4_mean, q4_mean$MeanStep==max(q4_mean$MeanStep, na.rm = TRUE))
+
+## plot histogram
+plot(q4_mean$Interval, q4_mean$MeanStep, type="l", main = "Steps per Interval", xlab= "Interval", ylab= "Steps(Mean)", col="red" ,lwd=1)
+    abline(v = q4_max$Interval, col = "blue", lwd = 2)
+    legend(x = "topright", 
+           c("MaxSteps Interval"),
+           col = c("blue"),
+           lwd = c(2, 2, 2))
+```
+## 5. The 5-minute interval that, on average, contains the maximum number of steps
+```{r}
+q4_max<-subset(q4_mean, q4_mean$MeanStep==max(q4_mean$MeanStep, na.rm = TRUE))
+    print(q4_max)
+```
+
+## 6. Code to describe and show a strategy for imputing missing data
+
+```{r}
+## original data to be stored in a new variable called 'q6'
+q6 <- d
+
+##NA values in column 'Steps' are replaced with global average
+q6$steps[which(is.na(q6$steps))] <- mean(q6$steps, na.rm = TRUE)
+
+## example
+head(q6)
+```
+## 7. Histogram of the total number of steps taken each day after missing values are imputed
+```{r}
+q7 <- aggregate(x = q6[c("steps")],
+                FUN = sum,
+                by = list(Group.date = d$date), na.rm=TRUE)
+
+## stats
+q7_mean <- setNames(aggregate(x = q7[c("steps")],
+                             FUN = mean,
+                             by = list( q7$Group.date), na.rm=TRUE), c("Date", "Mean"))
+
+q7_median <- setNames(aggregate(x = q7[c("steps")],
+                               FUN = median,
+                               by = list(q7$Group.date), na.rm=TRUE), c("Date", "Median"))
+
+q7_all <- merge(q7_mean,q7_median,by="Date")
+
+hist(q7$steps,
+       col = "lightgray",
+       border = "black", 
+       xlab = "SUM(steps)",
+       main = "Histogram  Total Steps per day")
+        abline(v = mean(q7$steps),
+         col = "blue",
+         lwd = 2)
+        
+        abline(v = median(q7$steps),
+         col = "red",
+         lty = 2,
+         lwd = 2)
+        
+        legend(x = "topright", 
+         c("Mean","Median"),
+         col = c("blue","red"),
+         lwd = c(2, 2, 2))
+```
+## 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r}
+q8<-q6
+q8$day <- weekdays(q6$date)
+q8$day <- ifelse(q8$day == "Saturday" | q8$day == "Sunday" ,"weekend", "weekday")
+q8$day <- as.factor(q8$day)
+
+
+## aggregated data for graphic
+q8_sum <- setNames(aggregate(x = q8[c("steps")],
+                             FUN = sum,
+                             by = list(q8$interval, q8$day), na.rm=TRUE), c("Interval", "day", "SumStep"))
+
+## subsetting data for graphics
+q8_weekday<-subset(q8_sum, q8_sum$day=="weekday")
+q8_weekend<-subset(q8_sum, q8_sum$day=="weekend")
+
+## plot
+  par(mfrow=c(2,1))
+        plot(q8_weekday$Interval,q8_weekday$SumStep, main="Interval vs SumStep [weekdays]", type = "l", col = "blue", xlab = "Interval", ylab = "SumStep")
+        plot(q8_weekend$Interval,q8_weekend$SumStep, main="Interval vs SumStep [weekends]", type = "l", col = "red", xlab = "Interval", ylab = "SumStep")
+```
+## 9. All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
